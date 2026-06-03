@@ -58,7 +58,10 @@ services:
       retries: 3
 
   altshop:
-    image: ghcr.io/dizzzable/altshop-backend:${ALTSHOP_IMAGE_TAG:-latest}
+    #   image: ghcr.io/dizzzable/altshop-backend:${ALTSHOP_IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: "altshop"
     hostname: altshop
     restart: unless-stopped
