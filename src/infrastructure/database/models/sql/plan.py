@@ -3,8 +3,9 @@ from typing import Optional
 from uuid import UUID
 
 from remnawave.enums.users import TrafficLimitStrategy
-from sqlalchemy import ARRAY, BigInteger, Boolean, Enum, ForeignKey, Integer, Numeric, String
+from sqlalchemy import BigInteger, Boolean, Enum, ForeignKey, Integer, Numeric, String
 from sqlalchemy import UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.enums import ArchivedPlanRenewMode, Currency, PlanAvailability, PlanType
