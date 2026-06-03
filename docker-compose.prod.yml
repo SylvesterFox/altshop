@@ -1,6 +1,9 @@
 services:
   altshop-nginx:
-    image: ghcr.io/dizzzable/altshop-nginx:${ALTSHOP_NGINX_IMAGE_TAG:-latest}
+    #image: ghcr.io/dizzzable/altshop-nginx:${ALTSHOP_NGINX_IMAGE_TAG:-latest}
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
     container_name: altshop-nginx
     hostname: altshop-nginx
     restart: always
