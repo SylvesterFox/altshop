@@ -8,7 +8,7 @@ import hmac
 import uuid
 from decimal import Decimal
 from typing import Final
-from urllib.parse import parse_qs, urlencode
+from urllib.parse import parse_qs, quote, urlencode
 from uuid import UUID
 
 import orjson
@@ -93,7 +93,12 @@ class YoomoneyGateway(BasePaymentGateway):
     QUICKPAY_URL: Final[str] = "https://yoomoney.ru/quickpay/confirm"
     QUICKPAY_FORM: Final[str] = "shop"
     DEFAULT_PAYMENT_TYPE: Final[str] = "AC"
-    SUPPORTED_NOTIFICATION_TYPES: Final[set[str]] = {"p2p-in", "card-in"}
+    SUPPORTED_NOTIFICATION_TYPES: Final[set[str]] = {
+        "p2p-in",
+        "card-in",
+        "p2p-incoming",
+        "card-incoming",
+    }
     TRUE_VALUES: Final[set[str]] = {"1", "true", "yes", "on"}
 
     def __init__(
@@ -148,15 +153,19 @@ class YoomoneyGateway(BasePaymentGateway):
         if notification_type not in self.SUPPORTED_NOTIFICATION_TYPES:
             raise ValueError("Unsupported YooMoney notification_type")
 
-        provided_signature = (form_data.get("sha1_hash") or "").strip()
-        if not provided_signature:
-            raise ValueError("Missing YooMoney sha1_hash")
+        provided_signature = (form_data.get("sign") or "").strip()
+        if provided_signature:
+            expected_signature = self._calculate_webhook_sign_signature(form_data)
+        else:
+            provided_signature = (form_data.get("sha1_hash") or "").strip()
+            if not provided_signature:
+                raise ValueError("Missing YooMoney webhook signature")
+            expected_signature = self._calculate_webhook_sha1_signature(form_data)
 
-        expected_signature = self._calculate_webhook_signature(form_data)
         if not hmac.compare_digest(expected_signature.lower(), provided_signature.lower()):
             raise PermissionError("Invalid YooMoney webhook signature")
 
-        raw_payment_id = form_data.get("label")
+        raw_payment_id = form_data.get("label") or form_data.get("operation_label")
         if not raw_payment_id:
             raise ValueError("Missing YooMoney label")
 
@@ -203,7 +212,19 @@ class YoomoneyGateway(BasePaymentGateway):
                 return parsed_body
         return dict(request.query_params)
 
-    def _calculate_webhook_signature(self, form_data: dict[str, str]) -> str:
+    def _calculate_webhook_sign_signature(self, form_data: dict[str, str]) -> str:
+        signature_payload = "&".join(
+            f"{key}={quote(value, safe='')}"
+            for key, value in sorted(form_data.items())
+            if key != "sign"
+        )
+        return hmac.new(
+            self._get_secret_key().encode(),
+            signature_payload.encode(),
+            hashlib.sha256,
+        ).hexdigest()
+
+    def _calculate_webhook_sha1_signature(self, form_data: dict[str, str]) -> str:
         signature_parts = [
             form_data.get("notification_type", ""),
             form_data.get("operation_id", ""),
