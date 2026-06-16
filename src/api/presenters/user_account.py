@@ -425,14 +425,15 @@ def build_subscription_response(
 ) -> SubscriptionResponse:
     """Serialize subscription DTO to API response."""
     user_telegram_id = subscription.user_telegram_id or fallback_user_telegram_id or 0
+    effective_status = (
+        subscription.get_status if hasattr(subscription, "get_status") else subscription.status
+    )
 
     return SubscriptionResponse(
         id=subscription.id or 0,
         user_remna_id=subscription.user_remna_id,
         user_telegram_id=user_telegram_id,
-        status=subscription.status.value
-        if hasattr(subscription.status, "value")
-        else str(subscription.status),
+        status=effective_status.value if hasattr(effective_status, "value") else str(effective_status),
         is_trial=subscription.is_trial,
         traffic_limit=subscription.traffic_limit,
         traffic_used=subscription.traffic_used,

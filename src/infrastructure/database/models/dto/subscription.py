@@ -173,6 +173,8 @@ class SubscriptionDto(BaseSubscriptionDto):
             if hasattr(self, field):
                 old_value = getattr(self, field)
                 new_value = getattr(sync_data, field)
+                if field == "status" and sync_data.expire_at < datetime_now():
+                    new_value = SubscriptionStatus.EXPIRED
                 if old_value != new_value:
                     setattr(self, field, new_value)
                     logger.info(f"Field '{field}' updated: '{old_value}' → '{new_value}'")

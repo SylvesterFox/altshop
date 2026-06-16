@@ -615,6 +615,39 @@ def test_hydrate_panel_subscription_url_falls_back_to_existing_local_subscriptio
     assert remna_subscription.url == "https://local.example/sub"
 
 
+def test_subscription_apply_sync_marks_past_active_panel_user_as_expired() -> None:
+    subscription = SubscriptionDto(
+        id=72,
+        user_remna_id=UUID("00000000-0000-0000-0000-000000000072"),
+        status=SubscriptionStatus.ACTIVE,
+        traffic_limit=100,
+        device_limit=1,
+        internal_squads=[],
+        external_squad=None,
+        expire_at=datetime.now(timezone.utc) + timedelta(days=30),
+        url="https://example.test/old",
+        device_type=DeviceType.OTHER,
+        plan=build_plan_snapshot().model_copy(deep=True),
+    )
+    remna_subscription = RemnaSubscriptionDto(
+        uuid=subscription.user_remna_id,
+        status=SubscriptionStatus.ACTIVE,
+        expire_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+        url="https://example.test/new",
+        traffic_limit=100,
+        device_limit=1,
+        traffic_limit_strategy=TrafficLimitStrategy.NO_RESET,
+        tag="starter",
+        internal_squads=[],
+        external_squad=None,
+    )
+
+    subscription.apply_sync(remna_subscription)
+
+    assert subscription.status == SubscriptionStatus.EXPIRED
+    assert subscription.expire_at == remna_subscription.expire_at
+
+
 def test_sync_user_with_creating_false_and_missing_subscription_does_not_create_local_subscription(
 ) -> None:
     user = SimpleNamespace(telegram_id=707)
